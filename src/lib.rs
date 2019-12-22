@@ -16,13 +16,17 @@ pub mod querystring {
         let parameters: Vec<&str> = query.split('&').collect();
         let mut res: String = String::new();
         for (idx, kvs) in parameters.iter().enumerate() {
-            let kv: Vec<&str> = kvs.split('=').collect();
-            assert_eq!(kv.len(), 2);
+            let kv: Vec<&str>;
+            if kvs.contains('=') {
+                kv = kvs.splitn(2, "=").collect();
+            } else {
+                kv = vec![kvs, ""];
+            }
             if idx == parameters.len() - 1 {
                 res.push_str(&format!(r#""{}":"{}""#, kv[0], kv[1]));
             }
             else {
-                res.push_str(&format!(r#""{}":"{}";"#, kv[0], kv[1]));
+                res.push_str(&format!(r#""{}":"{}","#, kv[0], kv[1]));
             }
         }
         format!("{{{}}}", res)
@@ -32,8 +36,12 @@ pub mod querystring {
         let parameters: Vec<&str> = query.split('&').collect();
         let mut res: HashMap<&str,&str> = HashMap::new();
         for kvs in parameters {
-            let kv: Vec<&str> = kvs.split('=').collect();
-            assert_eq!(kv.len(), 2);
+            let kv: Vec<&str>;
+            if kvs.contains('=') {
+                kv = kvs.splitn(2, "=").collect();
+            } else {
+                kv = vec![kvs, ""];
+            }
             res.insert(kv[0], kv[1]);
         }
         res
@@ -90,8 +98,6 @@ pub mod querystring {
         }
     }
 
-
-
 }
 
 #[cfg(test)]
@@ -116,18 +122,24 @@ mod tests {
     }
 
     fn test_parse() {
-        let query_str = "params=www. baidu. com/百度搜索&encSecKey=查询字-)(*^%$#@!~符串+~·！@￥%……%^%$:\"'*','-','.' and '_'&love=lu";
+        let query_str = "params=www. baidu. com/百度搜索&encSecKey=查询字-=)(*^%$#@!~符串+~·！@￥%……%^%$:\"'*','-','.' and '_'&love=lu";
         let res = querystring::parse(query_str);
 
         assert_eq!(res.get("params").unwrap(), &"www. baidu. com/百度搜索");
-        assert_eq!(res.get("encSecKey").unwrap(), &"查询字-)(*^%$#@!~符串+~·！@￥%……%^%$:\"'*','-','.' and '_'");
+        assert_eq!(res.get("encSecKey").unwrap(), &"查询字-=)(*^%$#@!~符串+~·！@￥%……%^%$:\"'*','-','.' and '_'");
         assert_eq!(res.get("love").unwrap(), &"lu");
     }
 
 
     fn test_json() {
-        let query_str = "idx=1024&name=lumi&family=tian";
-        let res = querystring::json(query_str);
-        assert_eq!(res, r#"{"idx":"1024";"name":"lumi";"family":"tian"}"#)
+        let query_str1 = "idx=1024&name=lumi&family=ti=an&love";
+        let res1 = querystring::json(query_str1);
+
+        let query_str2 = "encSecKey=查询字=-)(*&^%$#@!~符串+~·！@￥%……%^%$:\"'*','-','.' and '_'";
+        let res2 = querystring::json(query_str2);
+
+        assert_eq!(res1, r#"{"idx":"1024","name":"lumi","family":"ti=an","love":""}"#);
+
+        assert_eq!(res2, r#"{"encSecKey":"查询字=-)(*","^%$#@!~符串+~·！@￥%……%^%$:"'*','-','.' and '_'":""}"#);
     }
 }
