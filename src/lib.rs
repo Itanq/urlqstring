@@ -1,99 +1,97 @@
-use std::collections::HashMap;
-use std::thread::sleep;
 
-//type QueryParam<'a> = (&'a str, &'a str);
-//type QueryParams<'a> = Vec<QueryParam<'a>>;
-
-struct QueryParam<'a> {
-    key: &'a str,
-    value: &'a str,
-}
-
-#[feature(associated_type_defaults)]
-impl<'a> Iterator for QueryParam<'a> {
-    type Item = (&'a str, &'a str);
-    fn next(&mut self) -> Option<Self::Item> {
-        Some((self.key, self.value))
-    }
-}
-
-trait IntoQueryParam<'a> {
-    type Output = QueryParam<'a>;
-    fn iter(&self) -> Self::Output;
-}
-
-impl<'a, K: Into<&'a str>, V: Into<&'a str>> IntoQueryParam<'a> for HashMap<K,V> {
-    type Output = Vec<QueryParam<'a>>;
-
-    fn iter(&self) -> Self::Output {
-        self.iter().map(|item| {
-            QueryParam {
-                key: item.0,
-                value: item.1,
-            }
-        }).collect()
-    }
-}
+type QueryParam<'a> = (&'a str, &'a str);
+type QueryParams<'a> = Vec<QueryParam<'a>>;
 
 pub mod querystring {
-    use crate::{IntoQueryParam};
+    use crate::QueryParams;
     use std::collections::HashMap;
 
-    pub fn stringify<'a, T: IntoQueryParam<'a>>(query: T) -> String {
+    pub fn stringify(query: QueryParams) -> String {
         query.iter().fold(String::new(), |acc, x| {
             acc + &escape(&x.0) + "=" + escape(&x.1).as_ref() + "&"
         })
     }
 
-    fn escape(str: &str) -> String {
-        let mut enc = String::from("");
-        for ch in str.chars() {
-            if ch.is_ascii_alphanumeric() {
-                enc.push(ch);
-            } else if ch == '+' {
-                enc.push_str("%2B");
-            } else if ch ==  '!' {
-                enc.push_str("%21");
-            } else if ch == '*' {
-                enc.push_str("%2A");
-            } else if ch == '"' {
-                enc.push_str("%22");
-            } else if ch == '\'' {
-                enc.push_str("%27");
-            } else if ch == '(' {
-                enc.push_str("%28");
-            } else if ch == ')' {
-                enc.push_str("%29");
-            } else if ch == ';' {
-                enc.push_str("%3B");
-            } else if ch == ':' {
-                enc.push_str("%3A");
-            } else if ch == '@' {
-                enc.push_str("%40");
-            } else if ch == '&' {
-                enc.push_str("%26");
-            } else if ch == '=' {
-                enc.push_str("%3D");
-            } else if ch == '$' {
-                enc.push_str("%24");
-            } else if ch == ',' {
-                enc.push_str("%2C");
-            } else if ch == '/' {
-                enc.push_str("%2F");
-            } else if ch == '?' {
-                enc.push_str("%3F");
-            } else if ch == '%' {
-                enc.push_str("%25");
-            } else if ch == '#' {
-                enc.push_str("%23");
-            } else if ch == '[' {
-                enc.push_str("%5B");
-            } else if ch == ']' {
-                enc.push_str("%5D");
+    pub fn json(query: &str) -> String {
+        let parameters: Vec<&str> = query.split('&').collect();
+        let mut res: String = String::new();
+        for (idx, kvs) in parameters.iter().enumerate() {
+            let kv: Vec<&str> = kvs.split('=').collect();
+            assert_eq!(kv.len(), 2);
+            if idx == parameters.len() - 1 {
+                res.push_str(&format!(r#""{}":"{}""#, kv[0], kv[1]));
+            }
+            else {
+                res.push_str(&format!(r#""{}":"{}";"#, kv[0], kv[1]));
             }
         }
-        enc
+        format!("{{{}}}", res)
     }
+
+    pub fn parse(query: &str) -> HashMap<&str,&str> {
+        let parameters: Vec<&str> = query.split('&').collect();
+        let mut res: HashMap<&str,&str> = HashMap::new();
+        for kvs in parameters {
+            let kv: Vec<&str> = kvs.split('=').collect();
+            assert_eq!(kv.len(), 2);
+            res.insert(kv[0], kv[1]);
+        }
+        res
+    }
+
+    fn escape(str: &str) -> String {
+        let mut enc = Vec::<u8>::new();
+        for ch in str.as_bytes() {
+            if keep_as(*ch) {
+                enc.push(*ch);
+            } else {
+                enc.push(0x25);
+                let n1 = (*ch >> 4) & 0xf;
+                let n2 = *ch & 0xf;
+                enc.push(to_dec_ascii(n1));
+                enc.push(to_dec_ascii(n2));
+            }
+        }
+        String::from_utf8(enc).unwrap()
+    }
+
+    fn keep_as(n: u8) -> bool {
+        return n.is_ascii_alphanumeric()
+            || n == b'*'
+            || n == b'-'
+            || n == b'.'
+            || n == b'_'
+            || n == b'\''
+            || n == b'~'
+            || n == b'!'
+            || n == b'('
+            || n == b')';
+    }
+
+    fn to_dec_ascii(n: u8) -> u8 {
+        match n {
+            0 => 48,
+            1 => 49,
+            2 => 50,
+            3 => 51,
+            4 => 52,
+            5 => 53,
+            6 => 54,
+            7 => 55,
+            8 => 56,
+            9 => 57,
+            10 => b'A',
+            11 => b'B',
+            12 => b'C',
+            13 => b'D',
+            14 => b'E',
+            15 => b'F',
+            _ => 127
+        }
+    }
+
+
+
 }
 
 #[cfg(test)]
@@ -103,15 +101,33 @@ mod tests {
 
     #[test]
     fn it_works() {
-//        let enc = querystring::stringify(vec![
-//            ("params", "3EC4ojigTl0OgjyYtcd+97P7YKarculWrOxSgNO5clkQftvO1jOvS8aAhK6diyOb"),
-//            ("encSecKey", "5ff8bdb3ed3dd15a26e9025e9abcff0d7a3764dafbc70e33859a892584c681f1aab314b8ad1f3418650ff851bdb0685fc5136a88e059c592da104bbeaba666fbe89eb405c7b66eab4db8ee3ab13a3f98cb41b2ac9981ed4e441ed8e1870524d001ee6ebc1c09f7a945677e5b56a3e964a224c3ee75ac43fbf513f6a8bf7472ee"),
-//        ]);
-        let mut params = HashMap::new();
-        params.insert("encSecKey", "5ff8bdb3ed3dd15a26e9025e9abcff0d7a3764dafbc70e33859a892584c681f1aab314b8ad1f3418650ff851bdb0685fc5136a88e059c592da104bbeaba666fbe89eb405c7b66eab4db8ee3ab13a3f98cb41b2ac9981ed4e441ed8e1870524d001ee6ebc1c09f7a945677e5b56a3e964a224c3ee75ac43fbf513f6a8bf7472ee");
-        params.insert("params", "3EC4ojigTl0OgjyYtcd+97P7YKarculWrOxSgNO5clkQftvO1jOvS8aAhK6diyOb" );
-        let enc = querystring::stringify(params);
-        let res1: String= String::from("params=3EC4ojigTl0OgjyYtcd%2B97P7YKarculWrOxSgNO5clkQftvO1jOvS8aAhK6diyOb&encSecKey=5ff8bdb3ed3dd15a26e9025e9abcff0d7a3764dafbc70e33859a892584c681f1aab314b8ad1f3418650ff851bdb0685fc5136a88e059c592da104bbeaba666fbe89eb405c7b66eab4db8ee3ab13a3f98cb41b2ac9981ed4e441ed8e1870524d001ee6ebc1c09f7a945677e5b56a3e964a224c3ee75ac43fbf513f6a8bf7472ee&");
-        assert_eq!(enc, res1);
+        test_stringify();
+        test_parse();
+        test_json();
+    }
+
+    fn test_stringify() {
+        let enc1 = querystring::stringify(vec![
+            ("params", "www. baidu. com/百度搜索"),
+            ("encSecKey", "查询字=-)(*&^%$#@!~符串+~·！@￥%……%^%$:\"'*','-','.' and '_'"),
+        ]);
+        let res1: String= String::from("params=www.%20baidu.%20com%2F%E7%99%BE%E5%BA%A6%E6%90%9C%E7%B4%A2&encSecKey=%E6%9F%A5%E8%AF%A2%E5%AD%97%3D-)(*%26%5E%25%24%23%40!~%E7%AC%A6%E4%B8%B2%2B~%C2%B7%EF%BC%81%40%EF%BF%A5%25%E2%80%A6%E2%80%A6%25%5E%25%24%3A%22'*'%2C'-'%2C'.'%20and%20'_'&");
+        assert_eq!(enc1, res1);
+    }
+
+    fn test_parse() {
+        let query_str = "params=www. baidu. com/百度搜索&encSecKey=查询字-)(*^%$#@!~符串+~·！@￥%……%^%$:\"'*','-','.' and '_'&love=lu";
+        let res = querystring::parse(query_str);
+
+        assert_eq!(res.get("params").unwrap(), &"www. baidu. com/百度搜索");
+        assert_eq!(res.get("encSecKey").unwrap(), &"查询字-)(*^%$#@!~符串+~·！@￥%……%^%$:\"'*','-','.' and '_'");
+        assert_eq!(res.get("love").unwrap(), &"lu");
+    }
+
+
+    fn test_json() {
+        let query_str = "idx=1024&name=lumi&family=tian";
+        let res = querystring::json(query_str);
+        assert_eq!(res, r#"{"idx":"1024";"name":"lumi";"family":"tian"}"#)
     }
 }
