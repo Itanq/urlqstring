@@ -6,6 +6,26 @@ pub mod querystring {
     use crate::QueryParams;
     use std::collections::HashMap;
 
+    pub trait QueryParamGet {
+        fn get_value(&self, key: &str) -> Option<&str>;
+    }
+
+    impl QueryParamGet for &str {
+        fn get_value(&self, key: &str) -> Option<&str> {
+            let parameters: Vec<&str> = self.split('&').collect();
+            for value in parameters {
+                if value.contains('=') &&  value.contains(key){
+                    return Some(value.splitn(2, "=").collect::<Vec<&str>>()[1]);
+                } else if value.contains(key) {
+                    return Some("");
+                } else {
+                    continue;
+                }
+            }
+            None
+        }
+    }
+
     pub fn stringify(query: QueryParams) -> String {
         query.iter().fold(String::new(), |acc, x| {
             acc + &escape(&x.0) + "=" + escape(&x.1).as_ref() + "&"
@@ -104,12 +124,14 @@ pub mod querystring {
 mod tests {
     use super::querystring;
     use std::collections::HashMap;
+    use crate::querystring::QueryParamGet;
 
     #[test]
     fn it_works() {
         test_stringify();
         test_parse();
         test_json();
+        test_query_get_traits();
     }
 
     fn test_stringify() {
@@ -141,5 +163,20 @@ mod tests {
         assert_eq!(res1, r#"{"idx":"1024","name":"lumi","family":"ti=an","love":""}"#);
 
         assert_eq!(res2, r#"{"encSecKey":"查询字=-)(*","^%$#@!~符串+~·！@￥%……%^%$:"'*','-','.' and '_'":""}"#);
+    }
+
+    fn test_query_get_traits() {
+        let query_str1 = "idx=1024&name=lumin&family=ti=an&love";
+        let name = query_str1.get_value("name").unwrap();
+        let idx = query_str1.get_value("idx").unwrap();
+        let family = query_str1.get_value("family").unwrap();
+        let love = query_str1.get_value("love").unwrap();
+        let no = query_str1.get_value("error").unwrap_or("error");
+
+        assert_eq!(idx, "1024");
+        assert_eq!(name, "lumin");
+        assert_eq!(family, "ti=an");
+        assert_eq!(love, "");
+        assert_eq!(no, "error");
     }
 }
