@@ -8,6 +8,8 @@ pub mod querystring {
 
     pub trait QueryParamGet {
         fn get_value(&self, key: &str) -> Option<&str>;
+        fn replace_key(&self, old_key: &str, new_key: &str) -> String;
+        fn replace_value(&self, old_value: &str, new_value: &str) -> String;
     }
 
     impl QueryParamGet for &str {
@@ -23,6 +25,30 @@ pub mod querystring {
                 }
             }
             None
+        }
+
+        fn replace_key(&self, old_key: &str, new_key: &str) -> String {
+            let k1 = "&".to_owned() + old_key;
+            if self.contains(&k1) {
+                let k2 = "&".to_owned() + new_key;
+                self.replacen(&k1, &k2, 1)
+            } else if self.starts_with(old_key){
+                self.replacen(old_key, new_key, 1)
+            } else {
+                String::from("")
+            }
+        }
+
+        fn replace_value(&self, old_value: &str, new_value: &str) -> String {
+            let k1 = "=".to_owned() + old_value + "&";
+            if self.contains(&k1) {
+                let k2 = "=".to_owned() + new_value + "&";
+                self.replacen(&k1, &k2, 1)
+            } else if self.ends_with(old_value) {
+                self.replacen(old_value, new_value, 1)
+            } else {
+                String::from("")
+            }
         }
     }
 
@@ -166,7 +192,7 @@ mod tests {
     }
 
     fn test_query_get_traits() {
-        let query_str1 = "idx=1024&name=lumin&family=ti=an&love";
+        let query_str1 = "idx=1024&name=lumin&family=ti=an&love&ti=liang";
         let name = query_str1.get_value("name").unwrap();
         let idx = query_str1.get_value("idx").unwrap();
         let family = query_str1.get_value("family").unwrap();
@@ -178,5 +204,15 @@ mod tests {
         assert_eq!(family, "ti=an");
         assert_eq!(love, "");
         assert_eq!(no, "error");
+
+        let query2 = query_str1.replace_key("ti", "tian");
+        let query3 = query_str1.replace_key("love", "ai");
+        let query4 = query_str1.replace_value("ti=an", "[ti=an]");
+        let query5 = query_str1.replace_value("liang", "[liang]");
+
+        assert_eq!(query2, "idx=1024&name=lumin&family=ti=an&love&tian=liang");
+        assert_eq!(query3, "idx=1024&name=lumin&family=ti=an&ai&ti=liang");
+        assert_eq!(query4, "idx=1024&name=lumin&family=[ti=an]&love&ti=liang");
+        assert_eq!(query5, "idx=1024&name=lumin&family=ti=an&love&ti=[liang]");
     }
 }
