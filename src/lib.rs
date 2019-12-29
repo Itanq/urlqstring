@@ -9,7 +9,9 @@ pub mod querystring {
     pub trait QueryParamGet {
         fn get_value(&self, key: &str) -> Option<&str>;
         fn replace_key(&self, old_key: &str, new_key: &str) -> String;
+        fn replace_keys(&self, old_key: Vec<&str>, new_key: Vec<&str>) -> String;
         fn replace_value(&self, old_value: &str, new_value: &str) -> String;
+        fn replace_values(&self, old_value: Vec<&str>, new_value: Vec<&str>) -> String;
     }
 
     impl QueryParamGet for &str {
@@ -39,6 +41,21 @@ pub mod querystring {
             }
         }
 
+        fn replace_keys(&self, old_keys: Vec<&str>, new_keys: Vec<&str>) -> String {
+            assert_eq!(old_keys.len(), new_keys.len());
+            let mut res : String = String::from(*self);
+            for ( idx, old_key ) in old_keys.iter().enumerate() {
+                let k1 = "&".to_owned() + old_key;
+                if res.contains(&k1) {
+                    let k2 = "&".to_owned() + new_keys[idx];
+                    res = res.replacen(&k1, &k2, 1);
+                } else if res.starts_with(old_key) {
+                    res = res.replacen(old_key, new_keys[idx], 1);
+                }
+            }
+            res
+        }
+
         fn replace_value(&self, old_value: &str, new_value: &str) -> String {
             let k1 = "=".to_owned() + old_value + "&";
             if self.contains(&k1) {
@@ -50,6 +67,22 @@ pub mod querystring {
                 String::from("")
             }
         }
+
+        fn replace_values(&self, old_values: Vec<&str>, new_values: Vec<&str>) -> String {
+            assert_eq!(old_values.len(), new_values.len());
+            let mut res : String = String::from(*self);
+            for (idx, old_value) in old_values.iter().enumerate() {
+                let k1 = "=".to_owned() + old_value + "&";
+                if res.contains(&k1) {
+                    let k2 = "=".to_owned() + new_values[idx] + "&";
+                    res = res.replacen(&k1, &k2, 1);
+                } else if res.ends_with(old_value) {
+                    res = res.replacen(old_value, new_values[idx], 1);
+                }
+            }
+            res
+        }
+
     }
 
     pub fn stringify(query: QueryParams) -> String {
@@ -214,5 +247,14 @@ mod tests {
         assert_eq!(query3, "idx=1024&name=lumin&family=ti=an&ai&ti=liang");
         assert_eq!(query4, "idx=1024&name=lumin&family=[ti=an]&love&ti=liang");
         assert_eq!(query5, "idx=1024&name=lumin&family=ti=an&love&ti=[liang]");
+
+        let q1 = "uid=1024&type=1086&/update/desc=desc_update_value";
+        let r1 = q1.replace_keys(vec!["uid", "/update/desc"], vec!["userId", "update_desc"]);
+        let r2 = q1.replace_values(vec!["1086", "desc_update_value"], vec!["10086", "update_desc_value"]);
+
+        assert_eq!(r1, "userId=1024&type=1086&update_desc=desc_update_value");
+        assert_eq!(r2, "uid=1024&type=10086&/update/desc=update_desc_value")
+
+
     }
 }
