@@ -129,12 +129,11 @@ impl<'a> QueryParams<'a> {
     /// # Examples
     ///
     /// ```
-    /// let x = &[1, 2, 4];
-    /// let mut iterator = x.iter();
-    ///
-    /// assert_eq!(iterator.next(), Some(&1));
-    /// assert_eq!(iterator.next(), Some(&2));
-    /// assert_eq!(iterator.next(), Some(&4));
+    /// let res = QueryParams::from(vec![("id","1024"), ("name","rust")])
+    ///     .replace_value("rust", "rust-lang");
+    /// let iterator = res.iter();
+    /// assert_eq!(iterator.next(), Some(&("id","1024")));
+    /// assert_eq!(iterator.next(), Some(&("name", "rust-lang")));
     /// assert_eq!(iterator.next(), None);
     /// ```
     pub fn iter(&self) -> Iter<QueryParam<'a>> {
@@ -254,6 +253,13 @@ mod test {
 
         let res2 = QueryParams::from(vec![("id","1024"), ("name","rust")]).stringify();
         assert_eq!(res2, "id=1024&name=rust&");
+
+        let res = QueryParams::from(vec![("id","1024"), ("name","rust")])
+            .replace_value("rust", "rust-lang");
+        let mut iterator = res.iter();
+        assert_eq!(iterator.next(), Some(&("id","1024")));
+        assert_eq!(iterator.next(), Some(&("name", "rust-lang")));
+        assert_eq!(iterator.next(), None);
     }
 }
 
