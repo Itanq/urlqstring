@@ -12,7 +12,8 @@ pub struct QueryParams<'a> {
 
 impl<'a> QueryParams<'a> {
 
-    ///! ```rust
+    /// Produces a URL query string from the QueryParams struct.
+    /// ```rust
     /// use urlqstring::QueryParams;
     /// fn main() {
     ///     let vec = vec![("id","1024"),("name","rust")];
@@ -30,7 +31,8 @@ impl<'a> QueryParams<'a> {
         })
     }
 
-    ///!```rust
+    /// Produces a json style string from the QueryParams struct.
+    ///```rust
     /// use urlqstring::QueryParams;
     /// fn main() {
     ///     let res = QueryParams::from(vec![("id","1024"), ("name","rust")]).json();
@@ -51,7 +53,8 @@ impl<'a> QueryParams<'a> {
         format!("{{{}}}", res)
     }
 
-    ///!```rust
+    /// Get a value of specific key of URL query params
+    ///```rust
     /// use urlqstring::QueryParams;
     /// fn main() {
     ///     let res = QueryParams::from(vec![("id","1024"), ("name","rust")]).value("name");
@@ -67,7 +70,8 @@ impl<'a> QueryParams<'a> {
         None
     }
 
-    ///!```rust
+    /// Replace the specific key
+    ///```rust
     /// use urlqstring::QueryParams;
     /// fn main() {
     ///     let res = QueryParams::from(vec![("id","1024"), ("name","rust")])
@@ -76,7 +80,7 @@ impl<'a> QueryParams<'a> {
     ///     assert_eq!(res, "id=1024&language=rust&");
     /// }
     /// ```
-    pub fn replace_key<'b: 'a>(&mut self, old_key: &str, new_key: &'b str) -> Self {
+    pub fn replace_key<'b: 'a>(&self, old_key: &str, new_key: &'b str) -> Self {
         let mut res: Vec<QueryParam<'a>> = Vec::new();
         self.iter().map(|(k, v)| {
             if *k == old_key {
@@ -93,7 +97,46 @@ impl<'a> QueryParams<'a> {
         }
     }
 
+    /// Replace the specific value
+    ///```rust
+    /// use urlqstring::QueryParams;
+    /// fn main() {
+    ///     let res = QueryParams::from(vec![("id","1024"), ("name","rust")])
+    ///         .replace_value("rust", "rust-lang")
+    ///         .stringify();
+    ///     assert_eq!(res, "id=1024&name=rust-lang&");
+    /// }
+    /// ```
+    pub fn replace_value<'b: 'a>(&self, old_val: &str, new_val: &'b str) -> Self {
+        let mut res: Vec<QueryParam<'a>> = Vec::new();
+        self.iter().map(|(k, v)| {
+            if *v == old_val {
+                Some((*k, new_val))
+            } else {
+                Some((*k,*v))
+            }
+        }).for_each(|vec| {
+            res.push(vec.unwrap())
+        });
 
+        QueryParams {
+            inner: res
+        }
+    }
+
+    /// Returns an iterator over the slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = &[1, 2, 4];
+    /// let mut iterator = x.iter();
+    ///
+    /// assert_eq!(iterator.next(), Some(&1));
+    /// assert_eq!(iterator.next(), Some(&2));
+    /// assert_eq!(iterator.next(), Some(&4));
+    /// assert_eq!(iterator.next(), None);
+    /// ```
     pub fn iter(&self) -> Iter<QueryParam<'a>> {
         self.inner.iter()
     }
@@ -179,9 +222,22 @@ impl<'a> From<&'a str> for QueryParams<'a> {
     }
 }
 
+impl<'a> From<&'a String> for QueryParams<'a> {
+    fn from(s: &'a String) -> Self {
+        QueryParams::from_str(s)
+    }
+}
+
 impl<'a> From<Vec<QueryParam<'a>>> for QueryParams<'a> {
     fn from(vec: Vec<QueryParam<'a>>) -> Self {
         QueryParams::from_vec(vec)
+    }
+}
+
+impl<'a> Iterator for QueryParams<'a> {
+    type Item = QueryParam<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next()
     }
 }
 
