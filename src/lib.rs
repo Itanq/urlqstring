@@ -24,15 +24,18 @@
 
 mod querystring;
 
+#[macro_use]
+mod macros;
+
 pub use querystring::QueryParams;
 
 #[cfg(test)]
 mod tests {
     use super::querystring;
-    use std::collections::HashMap;
     use super::querystring::{
         QueryParams
     };
+    use std::collections::HashMap;
 
     #[test]
     fn it_works() {
@@ -40,6 +43,7 @@ mod tests {
         test_parse();
         test_json();
         test_query_get_traits();
+        test_object_macros();
     }
 
     fn test_stringify() {
@@ -105,5 +109,16 @@ mod tests {
 
         assert_eq!(query2, String::from("idx=1024&name=lumin&family=ti%3Dan&love&tian=liang&"));
         assert_eq!(query3, String::from("idx=1024&name=lumin&family=ti%3Dan&ai&ti=liang&"));
+    }
+
+    fn test_object_macros()
+    {
+        let value = proto_object!({
+            "params": "www. baidu. com/百度搜索",
+            "encSecKey": "查询字=-)(*&^%$#@!~符串+~·！@￥%……%^%$:'*','-','.' and '_'"
+        }).stringify();
+
+        let res1: String= String::from("params=www.%20baidu.%20com%2F%E7%99%BE%E5%BA%A6%E6%90%9C%E7%B4%A2&encSecKey=%E6%9F%A5%E8%AF%A2%E5%AD%97%3D-)(*%26%5E%25%24%23%40!~%E7%AC%A6%E4%B8%B2%2B~%C2%B7%EF%BC%81%40%EF%BF%A5%25%E2%80%A6%E2%80%A6%25%5E%25%24%3A'*'%2C'-'%2C'.'%20and%20'_'&");
+        assert_eq!(value, res1);
     }
 }

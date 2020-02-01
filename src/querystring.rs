@@ -7,7 +7,7 @@ type QueryParam<'a> = (&'a str, &'a str);
 
 #[derive(Debug, Clone)]
 pub struct QueryParams<'a> {
-    inner: Vec<QueryParam<'a>>,
+    pub(crate) inner: Vec<QueryParam<'a>>,
 }
 
 impl<'a> QueryParams<'a> {
@@ -57,7 +57,8 @@ impl<'a> QueryParams<'a> {
     ///```rust
     /// use urlqstring::QueryParams;
     /// fn main() {
-    ///     let res = QueryParams::from(vec![("id","1024"), ("name","rust")]).value("name");
+    ///     let query = QueryParams::from(vec![("id","1024"), ("name","rust")]);
+    ///     let res = query.value("name").unwrap();
     ///     assert_eq!(res, "rust");
     /// }
     /// ```
@@ -128,13 +129,16 @@ impl<'a> QueryParams<'a> {
     ///
     /// # Examples
     ///
-    /// ```
-    /// let res = QueryParams::from(vec![("id","1024"), ("name","rust")])
-    ///     .replace_value("rust", "rust-lang");
-    /// let iterator = res.iter();
-    /// assert_eq!(iterator.next(), Some(&("id","1024")));
-    /// assert_eq!(iterator.next(), Some(&("name", "rust-lang")));
-    /// assert_eq!(iterator.next(), None);
+    /// ```rust
+    /// use urlqstring::QueryParams;
+    /// fn main() {
+    ///     let res = QueryParams::from(vec![("id","1024"), ("name","rust")])
+    ///         .replace_value("rust", "rust-lang");
+    ///     let mut iterator = res.iter();
+    ///     assert_eq!(iterator.next(), Some(&("id","1024")));
+    ///     assert_eq!(iterator.next(), Some(&("name", "rust-lang")));
+    ///     assert_eq!(iterator.next(), None);
+    /// }
     /// ```
     pub fn iter(&self) -> Iter<QueryParam<'a>> {
         self.inner.iter()
