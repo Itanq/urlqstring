@@ -1,6 +1,6 @@
 [package]
 name = "urlqstring"
-version = "0.3.3"
+version = "0.3.4"
 authors = ["zmant <zmant724@aliyun.com>"]
 edition = "2018"
 readme = "README.md"
