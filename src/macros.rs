@@ -1,7 +1,6 @@
 
-use std::collections::BTreeMap;
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! proto_object {
     ($($obj:tt)+) => {
         object_internal!($($obj)+)
@@ -9,6 +8,7 @@ macro_rules! proto_object {
 }
 
 #[macro_export(local_inner_macros)]
+#[doc(hidden)]
 macro_rules! object_internal {
 
 
@@ -63,15 +63,14 @@ macro_rules! object_internal {
         {
             let mut object = Vec::<(&str, &str)>::new();
             object_internal!(@object object () ($($tt)+) ($($tt)+));
-            $crate::QueryParams{
-                inner: object
-            }
+            $crate::QueryParams::from( object )
         }
     };
 }
    
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! object_single_value {
     (true) => {
         "true"
@@ -99,6 +98,7 @@ macro_rules! object_single_value {
 }
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! object_internal_vec {
     ($($vec:tt)*) => {
         vec![$($vec)*]
@@ -106,9 +106,11 @@ macro_rules! object_internal_vec {
 }
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! object_unexpected {
     () => {};
 }
+
 
 #[test]
 fn  test()
@@ -116,7 +118,8 @@ fn  test()
     let val = proto_object!({
         "rust": true,
         "lumin": [1,2,3,123],
-        "test_string": "hello"
+        "test_string": "hello",
+        "test_vec": vec!["hello","world","and","rust"]
         }
     );
 

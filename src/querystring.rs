@@ -71,6 +71,24 @@ impl<'a> QueryParams<'a> {
         None
     }
 
+    /// Add a query string
+    /// ```rust
+    /// use urlqstring::QueryParams;
+    /// fn main() {
+    ///     let query = urlqstring::proto_object!({
+    ///         "rust": "system-language",
+    ///     });
+    ///     println!("{:?}", query.add_query_string("javascript", "script language"));
+    /// }
+    /// ```
+    pub fn add_query_string(&self, key: &'a str, value: &'a str) -> Self {
+        let mut res = self.clone();
+        res.inner.push((key, value));
+        QueryParams {
+            inner: res.inner
+        }
+    }
+
     /// Replace the specific key
     ///```rust
     /// use urlqstring::QueryParams;
