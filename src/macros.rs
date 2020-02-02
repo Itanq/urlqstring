@@ -1,4 +1,37 @@
 
+/// Construct a `QueryParams` from a Js object-like literal.
+///
+/// ```rust
+/// use urlqstring::proto_object;
+/// let value = proto_object!({
+///     "rust": "A sytem language",
+///     "python": "A script language",
+///     "apple": "A fruit"
+/// });
+/// ```
+///
+/// Variables or expressions can be inserted into the object-like literal.
+/// ```rust
+/// use urlqstring::proto_object;
+///
+/// let rust = "A system language";
+/// let python = ["script language", "dynamic language"];
+/// let value = proto_object!({
+///     "rust": rust,
+///     "python": python
+/// });
+/// ```
+///
+/// Trailing commas are allowed inside both arrays and objects.
+/// ```rust
+/// use urlqstring::proto_object;
+///
+/// let value = proto_object!({
+///     "id": 1024,
+///     "name": "rust",
+///     "comma": true,
+/// });
+/// ```
 
 #[macro_export(local_inner_macros)]
 macro_rules! proto_object {
@@ -67,7 +100,7 @@ macro_rules! object_internal {
         }
     };
 }
-   
+
 
 #[macro_export]
 #[doc(hidden)]
@@ -119,7 +152,7 @@ fn  test()
         "rust": true,
         "lumin": [1,2,3,123],
         "test_string": "hello",
-        "test_vec": vec!["hello","world","and","rust"]
+        "test_vec": vec!["hello","world","and","rust"],
         }
     );
 
