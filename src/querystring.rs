@@ -2,6 +2,7 @@
 
 use std::slice::Iter;
 use std::ops::Deref;
+use std::collections::HashMap;
 
 type QueryParam<'a> = (&'a str, &'a str);
 
@@ -162,7 +163,7 @@ impl<'a> QueryParams<'a> {
         self.inner.iter()
     }
 
-    fn from_str(s: &'a str) -> Self {
+    pub fn from_str(s: &'a str) -> Self {
         let query_str = s.split('&').collect::<Vec<&str>>();
         let mut result: Vec<QueryParam<'a>> = Vec::new();
         for query in query_str {
@@ -178,9 +179,19 @@ impl<'a> QueryParams<'a> {
         }
     }
 
-    fn from_vec(vec: Vec<QueryParam<'a>>) -> Self {
+    pub fn from_vec(vec: Vec<QueryParam<'a>>) -> Self {
         QueryParams {
             inner: vec
+        }
+    }
+
+    pub fn from_map(map: HashMap<&'a str, &'a str>) -> Self {
+        let inner = map.iter().fold(Vec::<QueryParam<'a>>::new(), |mut acc, (key, val)| {
+            acc.push((key, val));
+            acc
+        });
+        QueryParams {
+            inner
         }
     }
 
@@ -255,6 +266,12 @@ impl<'a> From<Vec<QueryParam<'a>>> for QueryParams<'a> {
     }
 }
 
+impl<'a> From<HashMap<&'a str, &'a str>> for QueryParams<'a> {
+    fn from(map: HashMap<&'a str, &'a str>) -> Self {
+        QueryParams::from_map(map)
+    }
+}
+
 impl<'a> Iterator for QueryParams<'a> {
     type Item = QueryParam<'a>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -265,6 +282,7 @@ impl<'a> Iterator for QueryParams<'a> {
 #[cfg(test)]
 mod test {
     use crate::querystring::{ QueryParams };
+    use std::collections::HashMap;
 
     #[test]
     fn it_works() {
@@ -282,6 +300,14 @@ mod test {
         assert_eq!(iterator.next(), Some(&("id","1024")));
         assert_eq!(iterator.next(), Some(&("name", "rust-lang")));
         assert_eq!(iterator.next(), None);
+
+        let mut map = HashMap::new();
+        map.insert("rust", "hello");
+        map.insert("cpp", "wolrd");
+
+        let map1 = QueryParams::from_map(map.clone());
+        assert_eq!(&map1.value("rust").unwrap(), map.get("rust").unwrap());
+        assert_eq!(&map1.value("cpp").unwrap(), map.get("cpp").unwrap());
     }
 }
 
